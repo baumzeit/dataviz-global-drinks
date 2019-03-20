@@ -1,0 +1,62 @@
+html, body {
+  min-height: 100vh;
+  margin: 0;
+}
+
+body {
+  min-width: min-content;
+  font: 100% Helvetica, sans-serif;
+  background: #263940;
+  display: flex;
+  flex-direction: column;
+}
+
+a {
+  color: #638d9f;
+}
+
+.header {
+  background: #fafafa;
+  padding: 0 1rem;
+}
+.header h1 {
+  color: #603;
+  font-size: 1.1rem;
+  letter-spacing: 0.05em;
+}
+
+#dataviz {
+  margin: 2rem 4rem 1rem 4rem;
+}
+
+svg {
+  /*background: #fafafa;*/
+}
+
+.footer {
+  background: #fafafa;
+  padding: 0.9rem 0.5rem;
+  margin-top: auto;
+  justify-self: flex-end;
+  display: flex;
+  justify-content: space-between;
+}
+.footer p {
+  color: #603;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.tick line {
+  stroke: rgba(255, 255, 255, 0.1);
+}
+
+.tick text {
+  fill: white;
+  font-size: 0.75rem;
+}
+
+.domain {
+  stroke: none;
+}
