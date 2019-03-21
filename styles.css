@@ -22,11 +22,21 @@ a {
 .header h1 {
   color: #603;
   font-size: 1.1rem;
+  font-weight: lighter;
   letter-spacing: 0.05em;
 }
 
 #dataviz {
   margin: 2rem 4rem 1rem 4rem;
+}
+
+.pie-g .labels {
+  fill: white;
+}
+
+.country-title {
+  font-size: 1.6rem;
+  fill: white;
 }
 
 svg {
