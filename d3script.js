@@ -62,15 +62,16 @@ window.onload = function() {
 	// pie setup
 		const pieChart = d3.pie()
 			.value(d => d.number)
+			.sort(null)
 
 		const newArc = d3.arc()
-			.innerRadius(20)
-			.outerRadius(80)
+			.innerRadius(60)
+			.outerRadius(100)
 
 		const pieG = svg
 				.append('g')
-				.attr('class', 'pieG')
-				.attr('transform', `translate(${width - 300}, 100)`)
+				.attr('class', 'pie-g')
+				.attr('transform', `translate(${width - 300}, 140)`)
 
 	// histogram setup
 		const numBins = 14
@@ -103,12 +104,12 @@ window.onload = function() {
 			.data(histoData)
 			.enter()
 				.append('g')
-				.attr('class', 'stackG')
+				.attr('class', 'stack-g')
 				.attr('transform', d => `translate(0, ${yScale(d.x0)})`)
 
 	// enhance bin content data and draw dots from it
 		stackG
-			.selectAll('g.countryG')
+			.selectAll('g.country-g')
 			.data(d => d.map((entry, i) => {
 				return {
 					xPos: i,
@@ -119,7 +120,7 @@ window.onload = function() {
 			}))
 			.enter()
 			.append('g')
-				.attr('class', 'countryG')
+				.attr('class', 'country-g')
 				.style('opacity', 0)
 				.transition('dotAppear')
 				.delay((d, i) => 20 * i)
@@ -127,7 +128,7 @@ window.onload = function() {
 				.each(drawDots)
 		
 		function drawDots(d, i) {
-			d3.select(this) // the corresponding countryG element
+			d3.select(this) // the corresponding country-g element
 				.append('circle')
 				.attr('class', 'country-circle')
 				.attr('cx', d => d.xPos * d.radius * 2 + d.radius)
@@ -135,7 +136,15 @@ window.onload = function() {
 				.attr('r', d => d.radius - 5)
 				.style('fill', d => fillDrinkScale(d.topDrink))
 				.on('mouseenter', d => {
+					d3.select('.country-g.active')
+						.classed('active', false)
+						.transition()
+						.duration(50)
+						.style('stroke-width', 'none')
+						.style('stroke-width', '0')
+
 					d3.select(this)
+						.classed('active', true)
 						.transition()
 						.duration(400)
 						.ease(d3.easeBackOut.overshoot(15))
@@ -143,13 +152,13 @@ window.onload = function() {
 						.style('stroke-width', '4')
 					updatePie(d)
 				})
-				.on('mouseleave', d => {
-					d3.select(this)
-						.transition()
-						.duration(50)
-						.style('stroke-width', 'none')
-						.style('stroke-width', '0')
-				})
+				// .on('mouseleave', d => {
+				// 	d3.select(this)
+				// 		.transition()
+				// 		.duration(50)
+				// 		.style('stroke-width', 'none')
+				// 		.style('stroke-width', '0')
+				// })
 		}
 
 		function updatePie(d) {
@@ -160,23 +169,38 @@ window.onload = function() {
 				}
 			}))
 
-			const pie = pieG
+			const path = pieG
 				.selectAll('path')
-				.data(newPieData)
+				.data(newPieData, d => d.data.name)
 
-			pie
+			path
+				.transition('tween')
+				.delay(160)
+				.duration(700)
+				.attrTween('d', arcTween)
+
+			path
 				.enter()
 				.append('path')
-				.merge(pie)
-				.attr('d', newArc)
-				.style('fill', (d,i) => fillDrinkScale(d.data.name))
-				.style('stroke', 'white')
-				.style('stroke-width', '2')
+					.attr('d', newArc)
+					.style('stroke', 'white')
+					.style('stroke-width', '2')
+					.style('fill', (d,i) => fillDrinkScale(d.data.name))
+					.style('opacity', 0)
+					.transition('pieAppear')
+					.duration(400)
+					.style('opacity', 1)
+					.each(function(d) { this._current = d })
 
-			// pie
-			// 	.exit().remove()
+			path
+				.exit().remove()
+
+			function arcTween(a) {
+		        const interpolate = d3.interpolate(this._current, a);
+		        this._current = interpolate(1);
+		        return (t) => newArc(interpolate(t));
+		    }
 		}
-
 
 		const yAxis = d3.axisLeft()
 			.scale(yScale)
