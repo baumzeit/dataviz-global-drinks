@@ -375,7 +375,7 @@ window.onload = function() {
 			.attr('x', 25)
 			.attr('y', 470)
 			.style('fill', 'black')
-			.text('sorted chronologically by country name ⟶')
+			.text('each row sorted by country name ⟶')
 
 
 		pieG
