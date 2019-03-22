@@ -363,19 +363,18 @@ window.onload = function() {
 		d3.select('.yAxisG')
 			.append('text')
 			.attr('class', 'axis-title')
-			.attr('x', -240)
+			.attr('text-anchor', 'left')
+			.attr('x', -180)
 			.attr('y', -60)
 			.attr('transform', 'rotate(-90)')
-			.style('fill', 'black')
-			.text('litres of pure alcohol / year ⟶')
+			.text('litres of pure alcohol / year / person ⟶')
 
 		svg
 			.append('text')
 			.attr('class', 'axis-title')
 			.attr('x', 25)
 			.attr('y', 470)
-			.style('fill', 'black')
-			.text('each row sorted by country name ⟶')
+			.text('alphabetically by country name ⟶')
 
 
 		pieG
