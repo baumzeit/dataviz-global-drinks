@@ -16,27 +16,70 @@ window.onload = function() {
             })
 		}) 
 
-		const dataDrinks = ['beer_servings', 'wine_servings', 'spirit_servings']
+		const countryNames = data.map(entry => entry.country)
 
-		const margin = { top: 20, right: 0, bottom: 20, left: 40 }
+		new autoComplete({
+		    selector: 'input[name="search"]',
+		    minChars: 2,
+		    onSelect: handleCountrySelect,
+		    source: function(term, suggest) {
+		        term = term.toLowerCase()
+		        var choices = countryNames
+		        var matches = []
+		        for (i=0; i<choices.length; i++) {
+		            if (~choices[i].toLowerCase().indexOf(term)) {
+		            	matches.push(choices[i]) 
+		            }
+		        	suggest(matches)
+		        }
+	    	}
+		})
+		
+		const randomItem = (names) => names[Math.floor(Math.random()*names.length)]
+
+		const searchInput = document.getElementById('search-input')
+		const searchAny = document.getElementById('search-any')
+		
+		searchInput.addEventListener('focusout', () => searchInput.value = searchInput.dataset.default)
+		searchInput.addEventListener('click', function() { this.select() } )
+		searchAny.addEventListener('mousedown', selectRandomCountry)
+		
+		// disable mouse events for a short period to prevent unintended selections with the mouse
+		function noCirclesEvents(time) { 
+			function block (bool) { 
+				document.querySelectorAll('.country-circle')
+					.forEach(circle => circle.classList.toggle('no-events', bool))
+			}
+			block(true)
+			setTimeout(block, time, false)
+		}
+
+		function handleCountrySelect(e, term) {
+			const selectedCountry = document.getElementById(term)
+			searchInput.dataset.default = term
+			
+			noCirclesEvents(1500)
+
+			const mouseenterEvent = new Event('mouseenter')
+        	selectedCountry.dispatchEvent(mouseenterEvent)
+		}
+
+		function selectRandomCountry(e) {
+			handleCountrySelect(null, randomItem(countryNames))
+			if (e) e.preventDefault()
+		}
+
+
+		const dataDrinks = ['beer_servings', 'wine_servings', 'spirit_servings']
+		const labelMap = d3.scaleOrdinal()
+			.domain(dataDrinks)
+			.range(['beer', 'wine', 'spirit'])
+			.unknown(['no drink'])
+
+		const margin = { top: 20, right: 20, bottom: 30, left: 80 }
 		
 		const height = 500 - margin.top - margin.bottom
 		const width = 1120 - margin.left - margin.right
-
-		const minMeanMax = data => key => {
-			if (typeof data[0][key] === 'number') {
-				return { 
-					key: key,
-					min: d3.min(data, d => d[key]),
-					mean: d3.mean(data, d => d[key]),
-					max: d3.max(data, d => d[key]) 
-				}
-			}
-			return `key '${key}' not of type number`
-		}
-
-		const basicStats = minMeanMax(data)
-		const dataStats = Object.keys(data[0]).map(basicStats)
 		
 		const svg = d3.select('#dataviz')
 			.append('svg')
@@ -45,19 +88,12 @@ window.onload = function() {
 			.append('g')
 				.attr('transform', `translate(${margin.left}, ${margin.top})`)
 
-		// country heading
-		const countryTitle = svg
-			.append('text')
-			.attr('class', 'country-title')
-			.attr('x', 200)
-			.attr('y', 30)
-
 		const yScale = d3.scaleLinear()
 			.domain(d3.extent(data, d => d.total_litres_of_pure_alcohol))
 			.range([height - margin.bottom, margin.top])
 
 		const fillDrinkScale = d3.scaleOrdinal()
-			.domain(dataDrinks)
+			.domain([...dataDrinks])
 			.range(['#FDBF6F', '#E7298A', '#00BEFF'])
 			.unknown(['gray'])
 
@@ -79,7 +115,7 @@ window.onload = function() {
 		const pieG = svg
 				.append('g')
 				.attr('class', 'pie-g')
-				.attr('transform', `translate(${width - 200}, 140)`)
+				.attr('transform', `translate(${width - 150}, 160)`)
 
 	// other g's
 		pieG.append('g')
@@ -155,6 +191,7 @@ window.onload = function() {
 			d3.select(this) // the corresponding country-g element
 				.append('circle')
 				.attr('class', 'country-circle')
+				.attr('id', d => d.country)
 				.attr('cx', d => d.xPos * d.radius * 2 + d.radius)
 				.attr('cy', d => 0)
 				.attr('r', d => d.radius - 5)
@@ -172,13 +209,19 @@ window.onload = function() {
 						.transition()
 						.duration(400)
 						.ease(d3.easeBackOut.overshoot(15))
-						.style('stroke', 'white')
+						.style('stroke', 'black')
 						.style('stroke-width', '4')
-					countryTitle
-						.text(d.country)
+
+					searchInput.value = d.country;
+			
+					favoriteDrinkG
+						.select('.favorite-text')
+						.text(labelMap(d.topDrink))
+						.style('fill', fillDrinkScale(d.topDrink))
 
 					updatePie(d)
 				})
+				.on('click', function() { noCirclesEvents(1500) })
 		}
 
 		function updatePie(d) {
@@ -188,13 +231,7 @@ window.onload = function() {
 					number: d[drink] 
 				}
 			})
-
-			// add 'no drinks' string to be shown as label if all categories have a value of 0 
-			if (!drinkData.some(drink => drink.number > 0)) { 
-				drinkData.forEach(entry => {
-					entry.number = 'no drinks'
-				})
-			}
+			const drinkTotal = d3.sum(drinkData, d => d.number)
 
 			const newPieData = pieChart(drinkData)
 
@@ -231,16 +268,11 @@ window.onload = function() {
 				.exit()
 				.remove()
 
-			
-			// draw labels for pie
-			
-			const labels = { 
-				beer_servings: 'beer', 
-				wine_servings: 'wine',
-				spirit_servings: 'spirit',
-				none: 'no drinks'
-			}
+			pieTotalNumber
+				.text(drinkTotal)
 
+			
+		// draw animated labels for pie
 			const text = svg
 			.select('.labels').selectAll('text')
 			.data(newPieData, d => d.data.name)
@@ -249,7 +281,8 @@ window.onload = function() {
 				.append('text')
 				.attr('dy', '.35em')
 				.merge(text)
-				.text(d => d.data.number)
+				.text(d => d.data.number === 0 ? 'none' : d.data.number)
+				.style('fill', d => fillDrinkScale(d.data.name))
 				.style('opacity', 0)
 				.transition().delay(140).duration(600)
 				.attrTween('transform', function(d) {
@@ -282,9 +315,7 @@ window.onload = function() {
 				.exit()
 				.remove()
 
-
-			// lines connecting text to pie slice
-
+		// draw animated lines connecting text to pie slice
 			const polyline = pieG.select('.lines')
 				.selectAll('polyline')
 				.data(newPieData, d => d.data.name)
@@ -318,23 +349,94 @@ window.onload = function() {
 
 
 		// draw axis
-
 		const yAxis = d3.axisLeft()
 			.scale(yScale)
 			.ticks(numBins)
-			.tickPadding(9)
+			.tickSize(6)
+			.tickPadding(8)
 
 		svg
 			.append('g')
-				.attr('id', 'yAxisG')
-				.attr('transform', `translate( -5, 0)`)
+				.attr('class', 'yAxisG')
+				.attr('transform', `translate( -6, 0)`)
 				.call(yAxis)
+		d3.select('.yAxisG')
+			.append('text')
+			.attr('class', 'axis-title')
+			.attr('x', -240)
+			.attr('y', -60)
+			.attr('transform', 'rotate(-90)')
+			.style('fill', 'black')
+			.text('litres of pure alcohol / year ⟶')
 
-		// show random initial data point
-		debugger
-		const countries = document.getElementsByClassName('country-circle');
-        const randomCountry = countries[Math.floor(Math.random() * countries.length)];
-        const mouseenterEvent = new Event('mouseenter');
-        randomCountry.dispatchEvent(mouseenterEvent);
+		svg
+			.append('text')
+			.attr('class', 'axis-title')
+			.attr('x', 25)
+			.attr('y', 470)
+			.style('fill', 'black')
+			.text('sorted chronologically by country name ⟶')
+
+
+		pieG
+			.append('text')
+			.attr('class', 'legend-title')
+			.attr('text-anchor', 'middle')
+			.attr('x', 0)
+			.attr('y', - pieRadius - 14)
+			.text('number of servings')
+
+	// total drink servings display
+		const pieTotalG = pieG
+			.append('g')
+			.attr('transform', 'translate(0,5)')
+
+		pieTotalG
+			.append('text')
+			.attr('class', 'pie-total-label')
+			.attr('text-anchor', 'middle')
+			.attr('dy', -10)
+			.text('total')
+
+		const pieTotalNumber = pieTotalG
+			.append('text')
+			.attr('class', 'pie-total-number')
+			.attr('text-anchor', 'middle')
+			.attr('dy', 10)
+
+	// drink type color legend
+		const drinkTypes = svg
+			.append('g')
+			.attr('class', 'drink-types')
+			.attr('transform', 'translate(550, 120)')
+			.selectAll('text')
+			.data(dataDrinks)
+			.enter()
+			.append('text')
+			.attr('y', (d, i) => i * 20)
+			.text(d => labelMap(d))
+			.style('fill', d => fillDrinkScale(d))
+
+	// favorite drink display
+		const favoriteDrinkG = pieG
+			.append('g')
+			.attr('class', 'favorite-g')
+			.attr('transform', 'translate(0, 170)')
+
+		favoriteDrinkG
+			.append('text')
+			.attr('class', 'legend-title')
+			.attr('text-anchor', 'middle')
+			.text('favorite drink')
+
+		favoriteDrinkG
+			.append('text')
+			.attr('class', 'favorite-text')
+			.attr('text-anchor', 'middle')
+			.attr('x', 0)
+			.attr('y', 30)
+	
+	// initial display
+		selectRandomCountry()
 	}
 }
